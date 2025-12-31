@@ -6,6 +6,8 @@ A collection of Python scripts for checking domain name availability using both 
 
 - **Bulk TLD Checker** (`lookup.py`) - Check domain availability across all 1,500+ TLDs
 - **RDAP Lookup** (`rdap_bootstrap.py`) - Modern RDAP protocol for detailed domain information
+- **SQLite Database** - Store all lookups with full history tracking
+- **Query Tool** (`query_history.py`) - Interactive tool to view historical data
 - Automatic rate limiting to prevent server blocks
 - Results saved to organized output files
 - Real-time progress tracking
@@ -73,7 +75,7 @@ Results saved to:
 
 ### RDAP Lookup (`rdap_bootstrap.py`)
 
-Uses modern RDAP protocol to check individual domains with detailed registration information.
+Uses modern RDAP protocol to check individual domains with detailed registration information. **All lookups are automatically saved to SQLite database for historical tracking.**
 
 ```bash
 python3 rdap_bootstrap.py
@@ -82,22 +84,28 @@ python3 rdap_bootstrap.py
 **Prompts:**
 - Enter full domain name (e.g., example.com)
 
-**Output Files:**
+**Output:**
+- **SQLite Database** (`domain_lookups.db`) - All lookups stored with full history
 - `{domain_name}_rdap_available.txt` - Available domains (appended)
 - `{domain_name}_rdap_registered.txt` - Registered domains with details (appended)
 
 **Features:**
+- **SQLite database storage** - Full historical tracking
 - Detailed registration information
 - Registrar name
 - Registration and expiration dates
 - Domain status codes
+- Historical lookup tracking (shows previous checks)
 - No rate limiting needed (single query)
 
 **Example:**
 ```
+Database initialized: domain_lookups.db
+
 Enter domain to check (e.g., example.com): google.com
 
 Checking: google.com
+✓ Saved to database
 
 Result:
 {
@@ -113,15 +121,63 @@ Result:
 }
 
 Domain saved to google_com_rdap_registered.txt
+
+📊 Historical lookups for google.com: 3 total
+  Most recent checks:
+  1. 2025-12-31T18:15:21Z - Registered
+  2. 2025-12-30T10:20:15Z - Registered
+  3. 2025-12-29T14:05:32Z - Registered
+```
+
+### Query Historical Data (`query_history.py`)
+
+Interactive tool to query the SQLite database and view historical lookup data.
+
+```bash
+python3 query_history.py
+```
+
+**Features:**
+- View all domains in database
+- Show complete history for any domain
+- List available domains
+- Find domains expiring soon
+- View recent lookups
+- Database statistics
+
+**Example Menu:**
+```
+============================================================
+Domain Lookup History Query Tool
+============================================================
+1. List all domains
+2. View domain history
+3. Show available domains
+4. Show domains expiring soon
+5. Show recent lookups
+6. Database statistics
+0. Exit
+============================================================
+
+📊 Database Statistics
+============================================================
+Total lookups: 47
+Unique domains: 23
+Available: 12
+Registered: 35
+First lookup: 2025-12-30T10:15:32Z
+Last lookup: 2025-12-31T18:15:21Z
 ```
 
 ## Files
 
 - `lookup.py` - Bulk domain checker using WHOIS
-- `rdap_bootstrap.py` - RDAP protocol checker for detailed info
+- `rdap_bootstrap.py` - RDAP protocol checker with SQLite storage
+- `query_history.py` - Interactive tool to query lookup history
 - `tlds.txt` - Official IANA TLD list (auto-downloaded)
 - `requirements.txt` - Python dependencies
-- Output files created during execution
+- `domain_lookups.db` - SQLite database (auto-created)
+- Output text files created during execution
 
 ## Requirements
 
@@ -144,6 +200,9 @@ Domain saved to google_com_rdap_registered.txt
 - Some registries return different response formats
 - Available status should be verified before registration
 - Results are appended to files, allowing multiple runs
+- **SQLite database** stores complete history for trend analysis
+- Database queries show how domain status changes over time
+- Useful for monitoring domains you're tracking
 
 ## License
 

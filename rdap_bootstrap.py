@@ -2,6 +2,96 @@ import requests
 import json
 from urllib.parse import urljoin
 from typing import Optional
+import sqlite3
+from datetime import datetime
+
+def init_database(db_path='domain_lookups.db'):
+    """Initialize SQLite database with schema"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS domain_lookups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain TEXT NOT NULL,
+            tld TEXT,
+            checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            available BOOLEAN,
+            registered_date TEXT,
+            expiration_date TEXT,
+            registrar TEXT,
+            statuses TEXT,
+            last_changed TEXT,
+            raw_response TEXT
+        )
+    ''')
+    
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_domain ON domain_lookups(domain)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_checked_at ON domain_lookups(checked_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_available ON domain_lookups(available)')
+    
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+def save_to_database(domain: str, result: dict, db_path='domain_lookups.db'):
+    """Save RDAP lookup result to SQLite database"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Extract TLD
+    tld = domain.rsplit('.', 1)[1] if '.' in domain else None
+    
+    cursor.execute('''
+        INSERT INTO domain_lookups 
+        (domain, tld, checked_at, available, registered_date, expiration_date, 
+         registrar, statuses, last_changed, raw_response)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        domain,
+        tld,
+        datetime.utcnow().isoformat() + 'Z',
+        result.get('available'),
+        result.get('registered'),
+        result.get('expires'),
+        result.get('registrar'),
+        json.dumps(result.get('statuses', [])),
+        result.get('last_changed'),
+        json.dumps(result)
+    ))
+    
+    conn.commit()
+    conn.close()
+
+
+def get_domain_history(domain: str, db_path='domain_lookups.db', limit=10):
+    """Retrieve historical lookups for a domain"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT checked_at, available, registered_date, expiration_date, registrar
+        FROM domain_lookups
+        WHERE domain = ?
+        ORDER BY checked_at DESC
+        LIMIT ?
+    ''', (domain, limit))
+    
+    results = cursor.fetchall()
+    conn.close()
+    
+    return [
+        {
+            'checked_at': row[0],
+            'available': row[1],
+            'registered_date': row[2],
+            'expiration_date': row[3],
+            'registrar': row[4]
+        }
+        for row in results
+    ]
+
 
 def get_rdap_bootstrap():
     """Fetch current IANA RDAP bootstrap data for domains"""
@@ -98,6 +188,10 @@ def check_domain_rdap(domain: str) -> dict:
 # ──────────────────────────────────────────────
 
 if __name__ == "__main__":
+    # Initialize database
+    db_path = init_database()
+    print(f"Database initialized: {db_path}\n")
+    
     domain = input("Enter domain to check (e.g., example.com): ").strip()
     
     if not domain:
@@ -106,6 +200,10 @@ if __name__ == "__main__":
     
     print(f"\nChecking: {domain}")
     result = check_domain_rdap(domain)
+    
+    # Save to database
+    save_to_database(domain, result, db_path)
+    print(f"✓ Saved to database")
     
     # Prepare output with domain name prefix
     domain_name = domain.replace('.', '_')
@@ -126,3 +224,11 @@ if __name__ == "__main__":
         print(f"\nDomain saved to {registered_file}")
     else:
         print(f"\nUnable to determine status (error: {result.get('error', 'Unknown')})")
+    
+    # Show historical data if available
+    history = get_domain_history(domain, db_path)
+    if len(history) > 1:
+        print(f"\n📊 Historical lookups for {domain}: {len(history)} total")
+        print("  Most recent checks:")
+        for i, record in enumerate(history[:3], 1):
+            print(f"  {i}. {record['checked_at']} - {'Available' if record['available'] else 'Registered'}")
