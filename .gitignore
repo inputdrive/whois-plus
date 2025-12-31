@@ -1,0 +1,62 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# SQLite Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Output Files
+*_available.txt
+*_registered.txt
+*_rdap_available.txt
+*_rdap_registered.txt
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+.env.local
+
+# Distribution / Packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
