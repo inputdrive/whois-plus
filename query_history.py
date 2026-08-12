@@ -4,7 +4,6 @@ Query utility for domain lookup history stored in SQLite database
 """
 import sqlite3
 import json
-from datetime import datetime
 import sys
 
 DB_PATH = 'domain_lookups.db'
@@ -64,12 +63,13 @@ def get_expiring_soon(days=90, db_path=DB_PATH):
         FROM domain_lookups
         WHERE available = 0
         AND expiration_date IS NOT NULL
+        AND expiration_date <= date('now', '+' || ? || ' days')
         AND id IN (
             SELECT MAX(id) FROM domain_lookups GROUP BY domain
         )
         ORDER BY expiration_date ASC
         LIMIT 50
-    ''')
+    ''', (days,))
     
     results = cursor.fetchall()
     conn.close()

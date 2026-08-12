@@ -1,9 +1,10 @@
+import re
 import requests
 import json
 from urllib.parse import urljoin
 from typing import Optional
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 def init_database(db_path='domain_lookups.db'):
     """Initialize SQLite database with schema"""
@@ -51,7 +52,7 @@ def save_to_database(domain: str, result: dict, db_path='domain_lookups.db'):
     ''', (
         domain,
         tld,
-        datetime.utcnow().isoformat() + 'Z',
+        datetime.now(timezone.utc).isoformat(),
         result.get('available'),
         result.get('registered'),
         result.get('expires'),
@@ -193,11 +194,15 @@ if __name__ == "__main__":
     print(f"Database initialized: {db_path}\n")
     
     domain = input("Enter domain to check (e.g., example.com): ").strip()
-    
+
     if not domain:
         print("No domain entered.")
         exit(1)
-    
+
+    if not re.match(r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$', domain):
+        print("Invalid domain format (e.g. example.com).")
+        exit(1)
+
     print(f"\nChecking: {domain}")
     result = check_domain_rdap(domain)
     
