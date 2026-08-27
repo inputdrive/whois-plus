@@ -118,13 +118,19 @@ def run_lookup(domain_name, tlds_file='tlds.txt'):
             print(f"  ... and {len(available_domains) - 20} more")
 
 
+def read_domain_label(args):
+    if args.domain is None:
+        try:
+            return input("Enter domain name (without TLD extension): ").strip()
+        except EOFError:
+            print("No domain entered.")
+            sys.exit(1)
+    return args.domain.strip()
+
+
 def main(argv=None):
     args = parse_args(argv)
-    if args.domain:
-        domain_name = args.domain.strip()
-    else:
-        domain_name = input("Enter domain name (without TLD extension): ").strip()
-
+    domain_name = read_domain_label(args)
     validate_label(domain_name)
     run_lookup(domain_name, args.tlds)
 

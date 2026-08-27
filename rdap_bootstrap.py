@@ -259,10 +259,14 @@ def main(argv=None):
     db_path = init_database(args.db)
     print(f"Database initialized: {db_path}\n")
 
-    if args.domain:
-        domain = args.domain.strip()
+    if args.domain is None:
+        try:
+            domain = input("Enter domain to check (e.g., example.com): ").strip()
+        except EOFError:
+            print("No domain entered.")
+            sys.exit(1)
     else:
-        domain = input("Enter domain to check (e.g., example.com): ").strip()
+        domain = args.domain.strip()
 
     if not domain:
         print("No domain entered.")

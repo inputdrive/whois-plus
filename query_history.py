@@ -195,15 +195,16 @@ def show_statistics(db_path=DB_PATH):
         print(f"First lookup: {date_range[0]}")
         print(f"Last lookup: {date_range[1]}")
 
-def parse_args(argv=None):
-    db_parent = argparse.ArgumentParser(add_help=False)
-    db_parent.add_argument(
+def add_db_option(parser, default=argparse.SUPPRESS):
+    """Add --db. Subparsers use SUPPRESS so they do not clobber a parent value."""
+    parser.add_argument(
         '--db',
-        default=DB_PATH,
+        default=default,
         metavar='PATH',
         help=f'SQLite database path (default: {DB_PATH})',
     )
 
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Query domain lookup history stored in SQLite.",
         epilog=(
@@ -218,26 +219,22 @@ def parse_args(argv=None):
             "  python3 query_history.py stats --db /tmp/lookups.db\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        parents=[db_parent],
     )
+    add_db_option(parser, default=DB_PATH)
     subparsers = parser.add_subparsers(dest='command', metavar='COMMAND')
 
-    subparsers.add_parser(
-        'list', parents=[db_parent], help='List all domains in the database'
-    )
+    list_p = subparsers.add_parser('list', help='List all domains in the database')
+    add_db_option(list_p)
 
-    hist = subparsers.add_parser(
-        'history', parents=[db_parent], help='Show lookup history for a domain'
-    )
+    hist = subparsers.add_parser('history', help='Show lookup history for a domain')
+    add_db_option(hist)
     hist.add_argument('domain', help='Domain name (e.g. example.com)')
 
-    subparsers.add_parser(
-        'available', parents=[db_parent], help='Show domains available at last check'
-    )
+    avail_p = subparsers.add_parser('available', help='Show domains available at last check')
+    add_db_option(avail_p)
 
-    exp = subparsers.add_parser(
-        'expiring', parents=[db_parent], help='Show domains expiring soon'
-    )
+    exp = subparsers.add_parser('expiring', help='Show domains expiring soon')
+    add_db_option(exp)
     exp.add_argument(
         '--days',
         type=int,
@@ -245,9 +242,8 @@ def parse_args(argv=None):
         help='Look-ahead window in days (default: 90)',
     )
 
-    rec = subparsers.add_parser(
-        'recent', parents=[db_parent], help='Show most recent lookups'
-    )
+    rec = subparsers.add_parser('recent', help='Show most recent lookups')
+    add_db_option(rec)
     rec.add_argument(
         '--limit',
         type=int,
@@ -255,9 +251,8 @@ def parse_args(argv=None):
         help='Number of lookups to show (default: 20)',
     )
 
-    subparsers.add_parser(
-        'stats', parents=[db_parent], help='Show database statistics'
-    )
+    stats_p = subparsers.add_parser('stats', help='Show database statistics')
+    add_db_option(stats_p)
 
     return parser.parse_args(argv)
 
@@ -289,7 +284,11 @@ def interactive_menu(db_path=DB_PATH):
     """Main interactive menu"""
     while True:
         print_menu()
-        choice = input("\nEnter choice: ").strip()
+        try:
+            choice = input("\nEnter choice: ").strip()
+        except EOFError:
+            print("\nGoodbye!")
+            break
         
         if choice == '0':
             print("Goodbye!")
@@ -299,7 +298,11 @@ def interactive_menu(db_path=DB_PATH):
             show_all_domains(db_path)
         
         elif choice == '2':
-            domain = input("Enter domain name: ").strip()
+            try:
+                domain = input("Enter domain name: ").strip()
+            except EOFError:
+                print("\nGoodbye!")
+                break
             show_domain_history(domain, db_path)
         
         elif choice == '3':
