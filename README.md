@@ -7,7 +7,7 @@ A collection of Python scripts for checking domain name availability using both 
 - **Bulk TLD Checker** (`lookup.py`) - Check domain availability across all 1,500+ TLDs
 - **RDAP Lookup** (`rdap_bootstrap.py`) - Modern RDAP protocol for detailed domain information
 - **SQLite Database** - Store all lookups with full history tracking
-- **Query Tool** (`query_history.py`) - Interactive tool to view historical data
+- **Query Tool** (`query_history.py`) - Interactive menu or CLI subcommands to view historical data
 - Automatic rate limiting to prevent server blocks
 - Results saved to organized output files
 - Real-time progress tracking
@@ -36,12 +36,21 @@ pip install -r requirements.txt
 
 Checks a single domain name across all available TLDs (e.g., checks "mysite" against .com, .net, .org, etc.).
 
+**Interactive** (prompts for a label when no domain is given):
 ```bash
 python3 lookup.py
 ```
 
-**Prompts:**
-- Enter domain name (without TLD extension)
+**Scripted:**
+```bash
+python3 lookup.py mysite
+python3 lookup.py mysite --tlds custom_tlds.txt
+python3 lookup.py --help
+```
+
+**Arguments:**
+- `domain` — domain label without TLD (required for non-interactive use)
+- `--tlds FILE` — TLD list file (default: `tlds.txt`)
 
 **Output Files:**
 - `{domain_name}_available.txt` - List of available domains
@@ -54,7 +63,7 @@ python3 lookup.py
 - Can be interrupted with Ctrl+C (progress saved)
 - Estimated time: 25-30 minutes for full scan
 
-**Example:**
+**Example (interactive):**
 ```
 Enter domain name (without TLD extension): mysite
 
@@ -77,12 +86,21 @@ Results saved to:
 
 Uses modern RDAP protocol to check individual domains with detailed registration information. **All lookups are automatically saved to SQLite database for historical tracking.**
 
+**Interactive** (prompts for a domain when none is given):
 ```bash
 python3 rdap_bootstrap.py
 ```
 
-**Prompts:**
-- Enter full domain name (e.g., example.com)
+**Scripted:**
+```bash
+python3 rdap_bootstrap.py example.com
+python3 rdap_bootstrap.py example.com --db /tmp/lookups.db
+python3 rdap_bootstrap.py --help
+```
+
+**Arguments:**
+- `domain` — full domain name such as `example.com` (required for non-interactive use)
+- `--db PATH` — SQLite database path (default: `domain_lookups.db`)
 
 **Output:**
 - **SQLite Database** (`domain_lookups.db`) - All lookups stored with full history
@@ -98,7 +116,7 @@ python3 rdap_bootstrap.py
 - Historical lookup tracking (shows previous checks)
 - No rate limiting needed (single query)
 
-**Example:**
+**Example (interactive):**
 ```
 Database initialized: domain_lookups.db
 
@@ -131,11 +149,35 @@ Domain saved to google_com_rdap_registered.txt
 
 ### Query Historical Data (`query_history.py`)
 
-Interactive tool to query the SQLite database and view historical lookup data.
+Query the SQLite database and view historical lookup data. With no command, the interactive menu is shown. Pass a subcommand to run a single query and exit.
 
+**Interactive:**
 ```bash
 python3 query_history.py
 ```
+
+**Scripted:**
+```bash
+python3 query_history.py list
+python3 query_history.py history example.com
+python3 query_history.py available
+python3 query_history.py expiring --days 30
+python3 query_history.py recent --limit 10
+python3 query_history.py stats
+python3 query_history.py --db /tmp/lookups.db stats
+python3 query_history.py --help
+```
+
+**Commands:**
+- `list` — all domains in the database
+- `history DOMAIN` — complete history for one domain
+- `available` — domains available at last check
+- `expiring [--days N]` — domains expiring within N days (default: 90)
+- `recent [--limit N]` — most recent lookups (default: 20)
+- `stats` — database statistics
+
+**Global options:**
+- `--db PATH` — SQLite database path (default: `domain_lookups.db`)
 
 **Features:**
 - View all domains in database
@@ -173,7 +215,7 @@ Last lookup: 2025-12-31T18:15:21Z
 
 - `lookup.py` - Bulk domain checker using WHOIS
 - `rdap_bootstrap.py` - RDAP protocol checker with SQLite storage
-- `query_history.py` - Interactive tool to query lookup history
+- `query_history.py` - Interactive menu or CLI to query lookup history
 - `tlds.txt` - Official IANA TLD list (auto-downloaded)
 - `requirements.txt` - Python dependencies
 - `domain_lookups.db` - SQLite database (auto-created)

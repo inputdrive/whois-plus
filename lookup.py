@@ -1,3 +1,4 @@
+import argparse
 import re
 import sys
 import whois
@@ -16,24 +17,53 @@ def is_available(domain):
 
 
 def load_tlds(filename='tlds.txt'):
-    with open(filename, 'r') as f:
-        tlds = []
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):
-                tlds.append(line.lower())
-        return tlds
+    try:
+        with open(filename, 'r') as f:
+            tlds = []
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    tlds.append(line.lower())
+            return tlds
+    except FileNotFoundError:
+        print(f"TLD list not found: {filename}")
+        sys.exit(1)
 
 
-def main():
-    domain_name = input("Enter domain name (without TLD extension): ").strip()
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Check a domain label against all TLDs via WHOIS.",
+        epilog=(
+            "Examples:\n"
+            "  python3 lookup.py                 interactive prompt\n"
+            "  python3 lookup.py mysite          check mysite across all TLDs\n"
+            "  python3 lookup.py mysite --tlds custom_tlds.txt\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        'domain',
+        nargs='?',
+        help='Domain label without TLD (e.g. mysite). Prompts if omitted.',
+    )
+    parser.add_argument(
+        '--tlds',
+        default='tlds.txt',
+        metavar='FILE',
+        help='TLD list file (default: tlds.txt)',
+    )
+    return parser.parse_args(argv)
 
+
+def validate_label(domain_name):
     if not _LABEL_RE.match(domain_name):
         print("Invalid domain label. Use only letters, digits, and hyphens.")
         sys.exit(1)
 
+
+def run_lookup(domain_name, tlds_file='tlds.txt'):
     print(f"\nLoading TLD list...")
-    tlds = load_tlds()
+    tlds = load_tlds(tlds_file)
     print(f"Found {len(tlds)} TLDs to check.\n")
 
     available_domains = []
@@ -86,6 +116,23 @@ def main():
             print(f"  - {domain}")
         if len(available_domains) > 20:
             print(f"  ... and {len(available_domains) - 20} more")
+
+
+def read_domain_label(args):
+    if args.domain is None:
+        try:
+            return input("Enter domain name (without TLD extension): ").strip()
+        except EOFError:
+            print("No domain entered.")
+            sys.exit(1)
+    return args.domain.strip()
+
+
+def main(argv=None):
+    args = parse_args(argv)
+    domain_name = read_domain_label(args)
+    validate_label(domain_name)
+    run_lookup(domain_name, args.tlds)
 
 
 if __name__ == "__main__":

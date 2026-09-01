@@ -1,10 +1,17 @@
+import argparse
 import re
+import sys
 import requests
 import json
 from urllib.parse import urljoin
 from typing import Optional
 import sqlite3
 from datetime import datetime, timezone
+
+_DOMAIN_RE = re.compile(
+    r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$'
+)
+
 
 def init_database(db_path='domain_lookups.db'):
     """Initialize SQLite database with schema"""
@@ -184,25 +191,32 @@ def check_domain_rdap(domain: str) -> dict:
         return {"available": None, "error": str(e)}
 
 
-# ──────────────────────────────────────────────
-# User input and output
-# ──────────────────────────────────────────────
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Look up a domain via RDAP and store the result in SQLite.",
+        epilog=(
+            "Examples:\n"
+            "  python3 rdap_bootstrap.py                 interactive prompt\n"
+            "  python3 rdap_bootstrap.py example.com     scripted lookup\n"
+            "  python3 rdap_bootstrap.py example.com --db /tmp/lookups.db\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        'domain',
+        nargs='?',
+        help='Full domain name (e.g. example.com). Prompts if omitted.',
+    )
+    parser.add_argument(
+        '--db',
+        default='domain_lookups.db',
+        metavar='PATH',
+        help='SQLite database path (default: domain_lookups.db)',
+    )
+    return parser.parse_args(argv)
 
-if __name__ == "__main__":
-    # Initialize database
-    db_path = init_database()
-    print(f"Database initialized: {db_path}\n")
-    
-    domain = input("Enter domain to check (e.g., example.com): ").strip()
 
-    if not domain:
-        print("No domain entered.")
-        exit(1)
-
-    if not re.match(r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$', domain):
-        print("Invalid domain format (e.g. example.com).")
-        exit(1)
-
+def run_rdap_lookup(domain: str, db_path: str):
     print(f"\nChecking: {domain}")
     result = check_domain_rdap(domain)
     
@@ -237,3 +251,33 @@ if __name__ == "__main__":
         print("  Most recent checks:")
         for i, record in enumerate(history[:3], 1):
             print(f"  {i}. {record['checked_at']} - {'Available' if record['available'] else 'Registered'}")
+
+
+def main(argv=None):
+    args = parse_args(argv)
+
+    db_path = init_database(args.db)
+    print(f"Database initialized: {db_path}\n")
+
+    if args.domain is None:
+        try:
+            domain = input("Enter domain to check (e.g., example.com): ").strip()
+        except EOFError:
+            print("No domain entered.")
+            sys.exit(1)
+    else:
+        domain = args.domain.strip()
+
+    if not domain:
+        print("No domain entered.")
+        sys.exit(1)
+
+    if not _DOMAIN_RE.match(domain):
+        print("Invalid domain format (e.g. example.com).")
+        sys.exit(1)
+
+    run_rdap_lookup(domain, db_path)
+
+
+if __name__ == "__main__":
+    main()
