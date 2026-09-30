@@ -6,13 +6,22 @@ import time
 
 # Labels only (no TLD); hyphens allowed but not at start/end
 _LABEL_RE = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$')
+_PARSER = getattr(whois, "parser", None)
+_WHOIS_NOT_FOUND_ERRORS = tuple(
+    exc for exc in (
+        getattr(_PARSER, "PywhoisError", None),  # older python-whois
+        getattr(_PARSER, "WhoisDomainNotFoundError", None),  # current python-whois
+        getattr(whois, "WhoisError", None),
+    )
+    if isinstance(exc, type) and issubclass(exc, Exception)
+)
 
 
 def is_available(domain):
     try:
         w = whois.whois(domain)
         return w.domain_name is None
-    except whois.parser.PywhoisError:
+    except _WHOIS_NOT_FOUND_ERRORS:
         return True  # authoritative "not found" response
 
 

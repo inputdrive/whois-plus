@@ -240,6 +240,7 @@ Last lookup: 2025-12-31T18:15:21Z
 
 - WHOIS lookups may fail for some TLDs (server issues, restrictions)
 - Some registries return different response formats
+- `lookup.py` supports both old and current `python-whois` exception names when handling "domain not found" responses
 - Available status should be verified before registration
 - Results are appended to files, allowing multiple runs
 - **SQLite database** stores complete history for trend analysis
